@@ -74,7 +74,7 @@ Everything stays on the user's device.
 - No backend — the entire app is one HTML file
 - No AI / LLM API calls of any kind
 
-Loaded from public CDNs at startup: React, Tailwind CSS (Play CDN), Babel Standalone, Google Fonts. No user data is sent to those CDNs.
+Loaded from public CDNs at startup: React, ReactDOM, Babel Standalone (unpkg), and Google Fonts. No user data is sent to those CDNs.
 
 ---
 
