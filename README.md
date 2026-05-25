@@ -7,6 +7,8 @@
 ![No tracking](https://img.shields.io/badge/tracking-none-444.svg)
 ![Single file](https://img.shields.io/badge/deploy-single%20HTML%20file-444.svg)
 
+📖 **New here? Read the [User Guide](./USER-GUIDE.md)** — a plain-language walkthrough for regulatory affairs, QA/RA, compliance, and engineering teams.
+
 A guided builder for **G7-compliant Software Bills of Materials for AI systems**, implementing the seven clusters of minimum elements published by G7 cybersecurity agencies.
 
 **Developed by [Brahim EL ALLAM](https://www.linkedin.com/in/brahim-el-allam-0a7731222/)** — TÜV SÜD-certified PRRC (EU MDR Art. 15) · QM/RA Manager
