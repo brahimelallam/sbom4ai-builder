@@ -26,3 +26,7 @@ build/
 
 # Claude Code local settings
 .claude/
+
+# Internal setup docs (kept locally, not published)
+CLAUDE-CODE-PROMPT.md
+START-HERE.md
