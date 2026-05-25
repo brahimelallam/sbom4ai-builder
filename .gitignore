@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Dependency directories (in case you upgrade to a build system later)
+node_modules/
+dist/
+build/
+.cache/
+
+# Environment files (none needed today, but a safety net)
+.env
+.env.local
+
+# Claude Code local settings
+.claude/

@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SBOM4AI Builder — G7 Software Bill of Materials for AI</title>
+  <meta name="description" content="A free, open-source builder for G7-compliant Software Bills of Materials for AI systems. Implements the seven clusters of minimum elements published by G7 cybersecurity agencies." />
+  <meta name="theme-color" content="#faf7f0" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="SBOM4AI Builder" />
+  <meta property="og:description" content="Build G7-compliant Software Bills of Materials for AI systems. 100% client-side, free, open-source." />
+
+  <!-- Fonts: Newsreader (editorial serif) · IBM Plex Sans (UI/labels) · JetBrains Mono (identifiers) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400&family=IBM+Plex+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- React 18 (UMD production) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Minimal utility classes still needed (responsive helpers + spin animation) -->
+  <style>
+    @keyframes _spin { to { transform: rotate(360deg); } }
+    .animate-spin { animation: _spin 1s linear infinite; }
+    @media (max-width: 767.98px) {
+      .md\:block { display: none !important; }
+    }
+    @media (min-width: 768px) {
+      .md\:hidden { display: none !important; }
+      .md\:block { display: block !important; }
+    }
+  </style>
+
+  <!-- Theme / design system -->
+  <style>
+    /* =========================================================================
+     * DESIGN TOKENS — institutional document aesthetic
+     * ========================================================================= */
+    :root {
+      /* Paper / surface tones */
+      --paper: #faf7f0;
+      --paper-2: #f3ede0;
+      --paper-3: #ebe3d2;
+      --paper-elev: #fffdf7;
+
+      /* Ink tones */
+      --ink: #1c1917;
+      --ink-2: #44403c;
+      --ink-3: #78716c;
+      --ink-4: #a8a29e;
+      --ink-5: #d6d3d1;
+
+      /* Rules / borders */
+      --rule: #c9bfae;
+      --rule-soft: #ddd2bd;
+      --rule-faint: #ebe3d2;
+
+      /* Accent — deep institutional red (like an official seal) */
+      --accent: #7a1f1f;
+      --accent-2: #5a1414;
+      --accent-bg: rgba(122, 31, 31, 0.06);
+      --accent-bg-2: rgba(122, 31, 31, 0.12);
+
+      /* Status */
+      --success: #2d5e3f;
+      --warning: #8a5a14;
+      --danger: #8a1f1f;
+    }
+
+    html, body, #root { min-height: 100%; }
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: 'Newsreader', 'Source Serif Pro', Georgia, serif;
+      font-size: 16px;
+      line-height: 1.55;
+      font-feature-settings: 'kern', 'liga', 'onum';
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    /* Print-style paper grain */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        radial-gradient(circle at 12% 8%, rgba(122,31,31,0.025) 0%, transparent 45%),
+        radial-gradient(circle at 88% 92%, rgba(122,31,31,0.02) 0%, transparent 55%);
+      z-index: 0;
+    }
+    #root { position: relative; z-index: 1; }
+
+    /* Typography classes */
+    .serif      { font-family: 'Newsreader', Georgia, serif; }
+    .serif-italic { font-family: 'Newsreader', Georgia, serif; font-style: italic; }
+    .sans       { font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+    .mono       { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+    /* Color utilities */
+    .text-ink   { color: var(--ink); }
+    .text-ink-2 { color: var(--ink-2); }
+    .text-ink-3 { color: var(--ink-3); }
+    .text-ink-4 { color: var(--ink-4); }
+    .text-accent { color: var(--accent); }
+    .text-success { color: var(--success); }
+    .text-warning { color: var(--warning); }
+    .text-danger { color: var(--danger); }
+    .bg-paper   { background: var(--paper); }
+    .bg-paper-2 { background: var(--paper-2); }
+    .bg-paper-3 { background: var(--paper-3); }
+    .bg-paper-elev { background: var(--paper-elev); }
+    .bg-accent  { background: var(--accent); }
+    .bg-accent-soft { background: var(--accent-bg); }
+
+    /* Borders / rules */
+    .border-rule       { border-color: var(--rule); }
+    .border-rule-soft  { border-color: var(--rule-soft); }
+    .border-rule-faint { border-color: var(--rule-faint); }
+    .border-accent     { border-color: var(--accent); }
+
+    /* SMALL CAPS labels — editorial style */
+    .label-caps {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+    }
+    .label-caps-accent {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    /* Section number — like § 1 in a regulatory document */
+    .section-num {
+      font-family: 'Newsreader', serif;
+      font-style: italic;
+      font-weight: 400;
+      color: var(--accent);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      padding: 0.55rem 1rem;
+      border: 1px solid var(--ink);
+      background: transparent;
+      color: var(--ink);
+      cursor: pointer;
+      transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+      border-radius: 0;
+    }
+    .btn:hover { background: var(--ink); color: var(--paper); }
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #faf7f0;
+    }
+    .btn-primary:hover { background: var(--accent-2); border-color: var(--accent-2); color: #faf7f0; }
+    .btn-ghost {
+      border-color: transparent;
+      color: var(--ink-2);
+      padding: 0.4rem 0.75rem;
+    }
+    .btn-ghost:hover { background: var(--paper-2); color: var(--ink); border-color: transparent; }
+    .btn-soft {
+      border-color: var(--rule);
+      background: var(--paper-elev);
+      color: var(--ink-2);
+    }
+    .btn-soft:hover { background: var(--paper-3); border-color: var(--ink-4); color: var(--ink); }
+    .btn-danger-ghost {
+      border-color: transparent;
+      color: var(--danger);
+    }
+    .btn-danger-ghost:hover { background: var(--accent-bg); border-color: transparent; color: var(--accent-2); }
+    .btn-sm { padding: 0.35rem 0.7rem; font-size: 12px; gap: 0.35rem; }
+
+    /* Form controls */
+    .input, .textarea, .select {
+      width: 100%;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      color: var(--ink);
+      background: var(--paper-elev);
+      border: 1px solid var(--rule);
+      border-radius: 0;
+      padding: 0.6rem 0.75rem;
+      transition: border-color 150ms ease, background 150ms ease;
+    }
+    .input::placeholder, .textarea::placeholder { color: var(--ink-4); }
+    .input:focus, .textarea:focus, .select:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: #fff;
+    }
+    .input-mono { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; }
+    .textarea { min-height: 88px; resize: vertical; line-height: 1.55; }
+    .input-datetime { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+
+    /* Select arrow */
+    .select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2378716c' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      padding-right: 2rem;
+    }
+
+    /* Tag chip */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.25rem 0.5rem 0.25rem 0.65rem;
+      background: var(--paper-2);
+      border: 1px solid var(--rule);
+      border-radius: 2px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 12px;
+      color: var(--ink);
+    }
+    .chip button { color: var(--ink-3); transition: color 150ms; }
+    .chip button:hover { color: var(--accent); }
+
+    /* Multi-select option */
+    .opt {
+      padding: 0.4rem 0.75rem;
+      background: var(--paper-elev);
+      border: 1px solid var(--rule);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 12.5px;
+      color: var(--ink-2);
+      cursor: pointer;
+      transition: all 150ms ease;
+      border-radius: 0;
+    }
+    .opt:hover { border-color: var(--ink-3); color: var(--ink); }
+    .opt-on {
+      background: var(--accent-bg);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* Progress bar — like an editorial bar */
+    .pbar { height: 3px; background: var(--paper-3); position: relative; overflow: hidden; }
+    .pbar > div { height: 100%; background: var(--accent); transition: width 400ms ease; }
+
+    /* Status indicator dot */
+    .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+    .dot-empty { border: 1px solid var(--ink-4); background: transparent; }
+    .dot-partial { background: var(--warning); }
+    .dot-full { background: var(--success); }
+
+    /* Field row */
+    .field {
+      display: grid;
+      grid-template-columns: 60px 1fr;
+      gap: 1.5rem;
+      padding: 1.75rem 0;
+      border-bottom: 1px solid var(--rule-faint);
+    }
+    .field:last-child { border-bottom: none; }
+    .field-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--accent);
+      padding-top: 4px;
+      letter-spacing: 0.04em;
+    }
+    .field-label {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--ink);
+      margin-bottom: 0.3rem;
+      letter-spacing: -0.005em;
+    }
+    .field-desc {
+      font-family: 'Newsreader', serif;
+      font-size: 14.5px;
+      line-height: 1.55;
+      color: var(--ink-2);
+      max-width: 60ch;
+      margin-bottom: 0.85rem;
+    }
+    .field-examples {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 11.5px;
+      color: var(--ink-3);
+      max-width: 60ch;
+      margin-top: 0.6rem;
+      font-style: italic;
+    }
+
+    /* Scrollbar */
+    *::-webkit-scrollbar { width: 10px; height: 10px; }
+    *::-webkit-scrollbar-track { background: transparent; }
+    *::-webkit-scrollbar-thumb { background: var(--rule); border: 3px solid var(--paper); border-radius: 10px; }
+    *::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
+
+    /* Drop cap utility */
+    .dropcap::first-letter {
+      font-family: 'Newsreader', serif;
+      font-weight: 500;
+      float: left;
+      font-size: 3.2em;
+      line-height: 0.85;
+      margin: 0.05em 0.08em 0 0;
+      color: var(--accent);
+    }
+
+    /* Rule (horizontal line with optional ornament) */
+    .rule { height: 1px; background: var(--rule); border: none; }
+    .rule-strong { height: 1px; background: var(--ink); border: none; }
+    .rule-double {
+      height: 4px;
+      border-top: 1px solid var(--rule);
+      border-bottom: 1px solid var(--rule);
+      background: transparent;
+    }
+
+    /* Sidebar nav item */
+    .nav-item {
+      display: grid;
+      grid-template-columns: 28px 1fr auto;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.55rem 0.5rem 0.55rem 0;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 13px;
+      color: var(--ink-2);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      transition: color 150ms ease;
+      border-left: 2px solid transparent;
+      padding-left: 0.5rem;
+    }
+    .nav-item:hover { color: var(--ink); }
+    .nav-item.active {
+      color: var(--accent);
+      border-left-color: var(--accent);
+      font-weight: 500;
+    }
+    .nav-num {
+      font-family: 'Newsreader', serif;
+      font-style: italic;
+      color: var(--ink-3);
+      font-size: 14px;
+    }
+    .nav-item.active .nav-num { color: var(--accent); }
+    .nav-pct {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px;
+      color: var(--ink-4);
+    }
+
+    /* Card / row for SBOM list */
+    .sbom-row {
+      display: grid;
+      grid-template-columns: 60px 1fr auto auto;
+      gap: 1.5rem;
+      align-items: center;
+      padding: 1.25rem 0;
+      border-bottom: 1px solid var(--rule-soft);
+      cursor: pointer;
+      transition: background 150ms ease;
+    }
+    .sbom-row:hover { background: var(--paper-2); }
+    .sbom-row:last-child { border-bottom: none; }
+
+    /* Link */
+    .link {
+      color: var(--accent);
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+      transition: color 150ms ease;
+    }
+    .link:hover { color: var(--accent-2); }
+    .link-subtle {
+      color: var(--ink-2);
+      text-decoration: underline;
+      text-decoration-color: var(--rule);
+      text-underline-offset: 3px;
+      transition: color 150ms ease, text-decoration-color 150ms ease;
+    }
+    .link-subtle:hover { color: var(--accent); text-decoration-color: var(--accent); }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 50;
+      background: rgba(28, 25, 23, 0.4);
+      backdrop-filter: blur(2px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+    .modal {
+      background: var(--paper);
+      border: 1px solid var(--ink);
+      max-width: 56rem;
+      width: 100%;
+      max-height: 90vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 30px 60px -20px rgba(28, 25, 23, 0.35);
+    }
+
+    /* Document number / volume marker */
+    .doc-marker {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+    }
+
+    /* Editor field grid: collapse on mobile */
+    @media (max-width: 768px) {
+      .field { grid-template-columns: 1fr; gap: 0.5rem; }
+      .field-num { padding-top: 0; font-size: 11px; }
+      .sbom-row { grid-template-columns: 40px 1fr; row-gap: 0.5rem; }
+      .sbom-row > *:nth-child(3),
+      .sbom-row > *:nth-child(4) { grid-column: 2; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect, useRef, useMemo } = React;
+
+    /* =========================================================================
+     * SBOM4AI BUILDER
+     * Open source · MIT · 100% client-side · No API, no tracking, no backend.
+     * Built on the G7 Cybersecurity Working Group document (Feb 2026):
+     * "Software Bill of Materials for AI — Minimum Elements"
+     * Developed by Brahim EL ALLAM.
+     * ========================================================================= */
+
+    // ============================== ICONS ==================================
+    const SvgIcon = ({ children, size = 16, className = '', style }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"
+           strokeLinejoin="round" className={className} style={style} aria-hidden="true">
+        {children}
+      </svg>
+    );
+    const mk = (paths) => (props) => <SvgIcon {...props}>{paths}</SvgIcon>;
+
+    const FileText   = mk(<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></>);
+    const Layers     = mk(<><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></>);
+    const Cpu        = mk(<><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></>);
+    const Database   = mk(<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></>);
+    const Server     = mk(<><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></>);
+    const Shield     = mk(<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>);
+    const Activity   = mk(<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>);
+    const Plus       = mk(<><path d="M5 12h14"/><path d="M12 5v14"/></>);
+    const Trash      = mk(<><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></>);
+    const Close      = mk(<><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>);
+    const Check      = mk(<path d="M20 6 9 17l-5-5"/>);
+    const ChevronRight = mk(<path d="m9 18 6-6-6-6"/>);
+    const ChevronLeft  = mk(<path d="m15 18-6-6 6-6"/>);
+    const ArrowLeft  = mk(<><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></>);
+    const Download   = mk(<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></>);
+    const Copy       = mk(<><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></>);
+    const Info       = mk(<><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></>);
+    const ExternalLink = mk(<><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></>);
+    const Sparkles   = mk(<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></>);
+    const Loader     = mk(<path d="M21 12a9 9 0 1 1-6.219-8.56"/>);
+    const Linkedin   = mk(<><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></>);
+
+    // ============================== SCHEMA ==================================
+    const CLUSTERS = [
+      {
+        id: 'metadata', name: 'Metadata', icon: FileText,
+        summary: 'About the SBOM document itself',
+        description: 'Information related to the SBOM for AI document itself — not the components it describes. Anchors the document with authorship, version, format, and provenance signals.',
+        elements: [
+          { id: 'sbom_author', label: 'SBOM Author', description: 'The entity that creates the SBOM data for the target component. Captures the entity operating the tool, not the tool itself. Use full names (not acronyms unless official).', type: 'text', placeholder: 'e.g., Acme Health AI GmbH' },
+          { id: 'sbom_version', label: 'SBOM Version', description: 'Identifier designating a change from a previous version, or that this is the first version. Semantic Versioning recommended (major version 1 for first published SBOM following these minimum elements).', type: 'text', placeholder: '1.0.0' },
+          { id: 'sbom_data_format_name', label: 'SBOM Data Format Name', description: 'The machine-processable data format used to represent the SBOM data.', type: 'select', options: ['SPDX', 'CycloneDX', 'SWID', 'Custom JSON', 'Other'] },
+          { id: 'sbom_data_format_version', label: 'SBOM Data Format Version', description: 'Version of the data format above. Deprecated versions should not be used.', type: 'text', placeholder: 'e.g., 2.3 (SPDX) or 1.6 (CycloneDX)' },
+          { id: 'sbom_author_signature', label: 'SBOM Author Signature', description: 'Digital signature attributable to the SBOM author. Use algorithms approved by NIST DSS, ISO/IEC 14888-4:2024, or ENISA Agreed Cryptographic Mechanisms.', type: 'textarea', placeholder: 'Signature value, certificate reference, or detached-signature URL' },
+          { id: 'sbom_tool_name', label: 'SBOM Tool Name', description: 'Name of the tool used by the SBOM author to generate or amend the SBOM.', type: 'text', placeholder: 'SBOM4AI Builder' },
+          { id: 'sbom_tool_version', label: 'SBOM Tool Version', description: 'Version identifier for the tool above. If unknown, indicate "unknown".', type: 'text', placeholder: '1.0.0' },
+          { id: 'sbom_generation_context', label: 'SBOM Generation Context', description: 'Software lifecycle phase at which the SBOM was generated. Component data may differ based on phase.', type: 'select', options: ['Before build (from source)', 'Build', 'After build (from binary)', 'Runtime', 'Post-deployment', 'Other'] },
+          { id: 'sbom_timestamp', label: 'SBOM Timestamp', description: 'Date and time of the most recent update to the SBOM data. Should conform to RFC 9557.', type: 'datetime' },
+          { id: 'sbom_dependency_relationship', label: 'SBOM Dependency Relationship', description: 'How software components relate: Software X includes Component Y, or Component A is derived from Component B. Supports building a dependency graph and documenting backported or forked software.', type: 'textarea', placeholder: 'e.g., "System includes Model X v2.1, fine-tuned from Open Model Y v1.0"' },
+        ],
+      },
+      {
+        id: 'slp', name: 'System Level Properties', icon: Layers,
+        summary: 'The AI system as a whole',
+        description: 'Information on the AI system as a whole — system composition, data flow, input/output properties, and intended application area. Covers systems composed of multiple AI elements (classifiers, LLMs, agents).',
+        elements: [
+          { id: 'system_name', label: 'System Name', description: 'Human-readable name assigned by the System producer. Use the full name (not an acronym unless official).', type: 'text', placeholder: 'e.g., ChestRad AI Triage' },
+          { id: 'system_components', label: 'System Components', description: 'Components included in the AI system: models, databases, software tools, and other components.', type: 'stringArray', placeholder: 'Type a component and press Enter', examples: 'AI models, databases, software tools, third-party services' },
+          { id: 'system_producer', label: 'System Producer', description: 'Name of the entity that creates, defines, and identifies the AI system.', type: 'text', placeholder: 'e.g., Acme Health AI GmbH' },
+          { id: 'system_version', label: 'System Version', description: 'Identifier specifying a change in the system from a previously identified version, or that it is the first. If unknown, indicate "unknown".', type: 'text', placeholder: '1.2.0' },
+          { id: 'system_timestamp', label: 'System Timestamp', description: 'Date and time of the most recent update to the AI system, including model or software updates of its components.', type: 'datetime' },
+          { id: 'system_data_flow', label: 'System Data Flow', description: 'Data flow between the components of the AI system: input/output endpoints, source→destination, APIs of external services, multi-agent communication protocols, bidirectional flows (e.g., web grounding).', type: 'textarea', placeholder: 'Describe the data flow path, endpoints, and external integrations' },
+          { id: 'system_data_usage', label: 'System Data Usage', description: 'How data in the AI system is processed and consumed. Link to documentation covering whether data is used for model improvement, API logging, metadata derivation, etc.', type: 'url', placeholder: 'https://docs.example.com/data-usage' },
+          { id: 'system_input_output_properties', label: 'System Input/Output Properties', description: 'Properties of the system inputs and outputs: types, modalities (text, audio, image, video), preprocessing (e.g., tokenizer for LLMs), and link to documentation describing impacts on decision-making.', type: 'textarea', placeholder: 'Input/output types, modalities, preprocessing approach, link to docs' },
+          { id: 'intended_application_area', label: 'Intended Application Area', description: 'The type of application the AI system is deployed in. Examples: real-time / near real-time, cybersecurity, medical/healthcare, finance, etc.', type: 'text', placeholder: 'e.g., Near real-time medical imaging triage' },
+        ],
+      },
+      {
+        id: 'models', name: 'Models', icon: Cpu,
+        summary: 'AI models used in the system',
+        description: 'Identifying information for each model used by the AI system, how its weights were produced, and its properties and limitations. Add one entry per model.',
+        isArray: true, itemLabel: 'Model',
+        elements: [
+          { id: 'model_name', label: 'Model Name', description: 'Human-readable name assigned by the model producer.', type: 'text', placeholder: 'e.g., ChestRadCNN-Base' },
+          { id: 'model_identifier', label: 'Model Identifier', description: 'Identifier(s) used as a lookup key. Prefer common machine-processable identifiers such as CPE, PURL, UUID, OmniBOR, or SWHID. Include all available identifiers.', type: 'textarea', placeholder: 'pkg:huggingface/org/model@v1.2  or  CPE:2.3:a:org:model:1.2:*:*:*:*:*:*:*' },
+          { id: 'model_version', label: 'Model Version', description: 'Version of the model. If the producer does not provide one, indicate "unknown".', type: 'text', placeholder: '1.2.0' },
+          { id: 'model_timestamp', label: 'Model Timestamp', description: 'Date and time of the most recent update — or official production release date — of the model.', type: 'datetime' },
+          { id: 'model_producer', label: 'Model Producer', description: 'Entity that creates, defines, and identifies the model. May include companies involved in pre-training, post-training, or fine-tuning.', type: 'text', placeholder: 'e.g., Acme Health AI GmbH; pre-trained by OpenSource AI Org' },
+          { id: 'model_description', label: 'Model Description', description: 'Capabilities, known limitations, and lineage. Includes intended application area, weaknesses, predecessor models, known derivatives, and dependencies.', type: 'textarea', placeholder: 'Capabilities, limitations, lineage, predecessor models, dependencies' },
+          { id: 'model_hash_value', label: 'Model Hash Value', description: 'ASCII-formatted output of a cryptographic hash applied to the model weights / file. If the executable artifact is not accessible, indicate "unknown".', type: 'text', placeholder: 'e.g., 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b...', mono: true },
+          { id: 'model_hash_algorithm', label: 'Model Hash Algorithm', description: 'The cryptographic algorithm that produced the hash above. Use IANA Hash Function Textual Names and a NIST-approved algorithm.', type: 'select', options: ['SHA-256', 'SHA-384', 'SHA-512', 'SHA3-256', 'SHA3-512', 'BLAKE2b-256', 'Other'] },
+          { id: 'model_properties', label: 'Model Properties', description: 'Characteristics of the model. Examples: parametric vs non-parametric; parameter count; architecture (encoder-decoder, encoder-only, decoder-only); network type (transformer, CNN, RNN); hyperparameters.', type: 'textarea', placeholder: 'Architecture, size, network type, hyperparameters' },
+          { id: 'model_input_output_properties', label: 'Model Input/Output Properties', description: 'Properties of the model inputs and outputs: data types, context length, modalities (text/audio/image/video), input preprocessing (e.g., tokenizer for LLMs or VLMs).', type: 'textarea', placeholder: 'Input/output types, context length, modality, tokenizer' },
+          { id: 'model_training_properties', label: 'Model Training Properties', description: 'Training techniques used (pre-training, post-training/fine-tuning, continual learning). Link to documentation (e.g., model card) describing learning type, post-training stages, RLHF, instruction tuning, optimization (DPO, PPO, GRPO).', type: 'textarea', placeholder: 'Learning type, training stages, optimization approach, link to model card' },
+          { id: 'model_license', label: 'Model License', description: 'License type for the model. Link to the licensing document. Specify whether model is open weight, open architecture, open data, or open training.', type: 'textarea', placeholder: 'License name + URL; openness (weights/architecture/data/training)' },
+          { id: 'model_external_references', label: 'Model External References', description: 'Links to model cards, frameworks, public documentation, research papers, JSON schemas, or system cards.', type: 'textarea', placeholder: 'One URL per line' },
+        ],
+      },
+      {
+        id: 'datasets', name: 'Datasets Properties', icon: Database,
+        summary: 'Datasets used across the lifecycle',
+        description: 'Datasets used during the whole life cycle of the model — identity, provenance, and characteristics. Add one entry per dataset.',
+        isArray: true, itemLabel: 'Dataset',
+        elements: [
+          { id: 'dataset_name', label: 'Dataset Name', description: 'Public identifier name assigned by the dataset creator.', type: 'text', placeholder: 'e.g., ChestRad-Multi-Center-2024' },
+          { id: 'dataset_description', label: 'Dataset Description', description: 'Primary intended use with regards to AI model training (pre-training, fine-tuning, benchmark, context extension). Note whether the dataset is private or public.', type: 'textarea', placeholder: 'Purpose (pre-training / fine-tuning / benchmark / evaluation); private or public' },
+          { id: 'dataset_content', label: 'Dataset Content', description: 'Content of the dataset (e.g., financial data, medical records), structure/encoding (JSON, XML), and data format (image, audio, video, 3D).', type: 'textarea', placeholder: 'Content type, format/encoding, data modality' },
+          { id: 'dataset_identifier', label: 'Dataset Identifier', description: 'URI / URL or other identifier allowing univocal identification of the dataset.', type: 'url', placeholder: 'https://datasets.example.com/chestrad-2024' },
+          { id: 'dataset_hash', label: 'Dataset Hash', description: 'Cryptographic hash over the dataset file(s).', type: 'text', placeholder: 'sha256:9f86d08188...', mono: true },
+          { id: 'dataset_provenance', label: 'Dataset Provenance', description: 'Origin (sources/organizations), collection methods (web crawling, commercial agreements), post-processing, preprocessing/curation, labelling steps. Creator. For synthetic data: generation method.', type: 'textarea', placeholder: 'Origin, collection method, processing, curation, labelling, creator' },
+          { id: 'dataset_statistical_properties', label: 'Dataset Statistical Properties', description: 'Statistical characteristics throughout the dataset lifecycle (e.g., mean, variance, median, mode, range, skewness).', type: 'textarea', placeholder: 'Relevant statistical metrics for the dataset' },
+          { id: 'dataset_sensitivity', label: 'Dataset Sensitivity', description: 'Type/sensitivity of data in the dataset. Select all that apply.', type: 'multiselect', options: ['PII (Personally Identifiable Information)', 'Freely accessible', 'Copyright protected', 'Sensitive (financial / medical records)', 'National security related', 'Other regulated category'] },
+          { id: 'dataset_dependency_relationship', label: 'Dataset Dependency Relationship', description: 'Software used to create, modify, and maintain the dataset (e.g., management, labelling, filtering tools). How a given dataset may be derived from another dataset.', type: 'textarea', placeholder: 'Tools used; derivation lineage from upstream datasets' },
+          { id: 'dataset_license', label: 'Dataset License', description: 'License type and URL to the licensing document for the dataset.', type: 'textarea', placeholder: 'License name + URL' },
+        ],
+      },
+      {
+        id: 'infrastructure', name: 'Infrastructure', icon: Server,
+        summary: 'Physical & virtual deployment infrastructure',
+        description: 'Physical and virtual infrastructure critical to operation and support of the AI system. Includes a link to a Hardware Bill of Materials (HBOM) when applicable.',
+        elements: [
+          { id: 'infrastructure_software', label: 'Infrastructure Software', description: 'Software dependencies required to deliver and run the AI system: firmware, package managers, third-party libraries, frameworks, runtime environments, tools.', type: 'stringArray', placeholder: 'Type a dependency and press Enter' },
+          { id: 'infrastructure_hardware', label: 'Infrastructure Hardware (HBOM Link)', description: 'Link to an existing Hardware Bill of Materials covering the hardware components on which the AI system is deployed.', type: 'url', placeholder: 'https://example.com/hbom.json' },
+        ],
+      },
+      {
+        id: 'security', name: 'Security Properties', icon: Shield,
+        summary: 'Cybersecurity measures',
+        description: 'Cybersecurity measures that apply to AI models and systems — both general and AI-specific controls, compliance, policy, and vulnerability references.',
+        elements: [
+          { id: 'security_controls', label: 'Security Controls', description: 'General + AI-specific cybersecurity controls. General: encryption, data minimization, differential privacy, access controls, API authentication, I/O anomaly detection, physical/technical controls, RBAC, administrative measures. AI-specific: adversarial robustness training, prompt-injection controls, input/output filters, data-level controls.', type: 'textarea', placeholder: 'List general and AI-specific controls; reference applied frameworks' },
+          { id: 'security_compliance', label: 'Security Compliance', description: 'Cybersecurity standards and certifications obtained by the producer (schemes, standards, frameworks the AI model/system is compliant with).', type: 'textarea', placeholder: 'e.g., ISO/IEC 27001, SOC 2 Type II, NIST AI RMF alignment' },
+          { id: 'cybersecurity_policy_information', label: 'Cybersecurity Policy Information', description: "Link to the AI model/system producer's published security.txt file.", type: 'url', placeholder: 'https://example.com/.well-known/security.txt' },
+          { id: 'vulnerability_referencing', label: 'Vulnerability Referencing', description: 'Link to databases/repositories that provide exploitability of known vulnerabilities in the AI model/system. Helps users assess deployment risk.', type: 'url', placeholder: 'https://example.com/security/advisories' },
+        ],
+      },
+      {
+        id: 'kpi', name: 'Key Performance Indicators', icon: Activity,
+        summary: 'Security & operational KPIs',
+        description: 'KPIs for the AI system and its components across lifecycle phases — both security-related metrics and operational performance.',
+        elements: [
+          { id: 'security_metrics', label: 'Security Metrics', description: 'Metrics evaluating the security characteristics of the integrated models or the system itself — e.g., robustness benchmarks (resilience against third-party manipulation).', type: 'textarea', placeholder: 'Robustness scores, adversarial benchmarks, red-team results' },
+          { id: 'operational_performance_kpis', label: 'Operational Performance KPIs', description: 'KPIs related to operational condition and threat indicators: system uptime, incident resolution time, system latency, request throughput, load balancing.', type: 'textarea', placeholder: 'Uptime SLO, p95 latency, throughput, MTTR, load-balancing strategy' },
+        ],
+      },
+    ];
+
+    // ============================== STORAGE ================================
+    const KEY_INDEX = 'sbom4ai:index';
+    const KEY_DOC = 'sbom4ai:doc:';
+    const loadIndex = () => { try { const r = localStorage.getItem(KEY_INDEX); return r ? JSON.parse(r) : []; } catch { return []; } };
+    const saveIndex = (i) => { try { localStorage.setItem(KEY_INDEX, JSON.stringify(i)); } catch {} };
+    const loadDoc = (id) => { try { const r = localStorage.getItem(KEY_DOC + id); return r ? JSON.parse(r) : null; } catch { return null; } };
+    const saveDoc = (id, doc) => { try { localStorage.setItem(KEY_DOC + id, JSON.stringify(doc)); } catch {} };
+    const deleteDoc = (id) => { try { localStorage.removeItem(KEY_DOC + id); } catch {} };
+
+    // ============================== HELPERS =================================
+    const newId = () => `sbom_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+    const pad = (n) => String(n).padStart(2, '0');
+
+    function makeEmptyDoc(name = 'Untitled SBOM for AI') {
+      const doc = { id: newId(), name, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), data: {} };
+      for (const c of CLUSTERS) doc.data[c.id] = c.isArray ? [] : {};
+      return doc;
+    }
+    function isFilled(v) {
+      if (v == null) return false;
+      if (typeof v === 'string') return v.trim().length > 0;
+      if (Array.isArray(v)) return v.length > 0;
+      if (typeof v === 'object') return Object.values(v).some(isFilled);
+      return true;
+    }
+    function clusterCompletion(c, data) {
+      if (c.isArray) {
+        const items = data || [];
+        if (items.length === 0) return { filled: 0, total: c.elements.length, pct: 0, items: 0 };
+        let f = 0, t = 0;
+        for (const item of items) for (const el of c.elements) { t += 1; if (isFilled(item[el.id])) f += 1; }
+        return { filled: f, total: t, pct: t === 0 ? 0 : Math.round((f / t) * 100), items: items.length };
+      }
+      const d = data || {};
+      let f = 0;
+      for (const el of c.elements) if (isFilled(d[el.id])) f += 1;
+      return { filled: f, total: c.elements.length, pct: c.elements.length === 0 ? 0 : Math.round((f / c.elements.length) * 100) };
+    }
+    function overallCompletion(doc) {
+      let f = 0, t = 0;
+      for (const c of CLUSTERS) { const r = clusterCompletion(c, doc.data[c.id]); f += r.filled; t += r.total || c.elements.length; }
+      return t === 0 ? 0 : Math.round((f / t) * 100);
+    }
+
+    function makeDemoDoc() {
+      const doc = makeEmptyDoc('ChestRad AI Triage v1 — Demo');
+      const now = new Date().toISOString().slice(0, 16);
+      doc.data.metadata = {
+        sbom_author: 'Acme Health AI GmbH — Regulatory & QM Team',
+        sbom_version: '1.0.0', sbom_data_format_name: 'CycloneDX', sbom_data_format_version: '1.6',
+        sbom_author_signature: 'Detached PKCS#7 signature — see /signatures/sbom-1.0.0.p7s',
+        sbom_tool_name: 'SBOM4AI Builder', sbom_tool_version: '1.0.0',
+        sbom_generation_context: 'After build (from binary)', sbom_timestamp: now,
+        sbom_dependency_relationship: 'ChestRad AI Triage v1 includes ChestRadCNN-Base v1.2 (fine-tuned from public OpenChest-V1).',
+      };
+      doc.data.slp = {
+        system_name: 'ChestRad AI Triage',
+        system_components: ['ChestRadCNN-Base v1.2 (classifier)', 'DICOM ingestion service', 'Triage decision API', 'Audit log database (PostgreSQL 16)'],
+        system_producer: 'Acme Health AI GmbH', system_version: '1.0.0', system_timestamp: now,
+        system_data_flow: 'PACS → DICOM ingestion → preprocessing → ChestRadCNN classifier → Triage decision API → hospital RIS. Audit logs persisted to PostgreSQL.',
+        system_data_usage: 'https://docs.example.com/chestrad/data-handling',
+        system_input_output_properties: 'Input: DICOM chest radiographs (PA/AP). Preprocessing: resize 512×512, normalize, histogram equalization. Output: JSON with 3-class probability scores + Grad-CAM heatmap PNG.',
+        intended_application_area: 'Near real-time chest radiograph triage in radiology workflow; Class IIa medical device under EU MDR.',
+      };
+      doc.data.models = [{
+        model_name: 'ChestRadCNN-Base', model_identifier: 'pkg:internal/acme-health/chestrad-cnn-base@1.2.0',
+        model_version: '1.2.0', model_timestamp: '2026-03-15T10:00',
+        model_producer: 'Acme Health AI GmbH (fine-tune); base architecture from OpenChest',
+        model_description: 'CNN for triage classification of chest radiographs into critical/urgent/routine. Trained on adult population only.',
+        model_hash_value: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+        model_hash_algorithm: 'SHA-256',
+        model_properties: 'Parametric CNN, ~38M parameters, ResNet-50 backbone with 3-class head. lr=1e-4, batch=32, AdamW.',
+        model_input_output_properties: 'Input: 512×512 grayscale tensor. Output: softmax over 3 classes + Grad-CAM heatmap.',
+        model_training_properties: 'Supervised. Pre-training on ImageNet-1k. Fine-tuning on internal labelled dataset. Model card: https://docs.example.com/chestrad/model-card',
+        model_license: 'Proprietary commercial license. Closed weights. Architecture publicly described.',
+        model_external_references: 'https://docs.example.com/chestrad/model-card',
+      }];
+      doc.data.datasets = [{
+        dataset_name: 'ChestRad-Multi-Center-2025',
+        dataset_description: 'Fine-tuning dataset of de-identified adult chest radiographs from 4 European hospitals. Private dataset under data-use agreements.',
+        dataset_content: 'Medical imaging: DICOM chest radiographs (PA/AP) with structured triage labels. JSON sidecar.',
+        dataset_identifier: 'https://internal.acme.example/datasets/chestrad-mc-2025',
+        dataset_hash: 'sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        dataset_provenance: 'Data-use agreements with 4 partner hospitals (2023–2025). De-identification per ISO 25237. Labelling by 3 board-certified radiologists, κ=0.86.',
+        dataset_statistical_properties: 'N=42,318 studies. Class balance: 12% critical / 28% urgent / 60% routine. Age 18–94 (mean 56). Sex: 51% F / 49% M.',
+        dataset_sensitivity: ['PII (Personally Identifiable Information)', 'Sensitive (financial / medical records)'],
+        dataset_dependency_relationship: 'Built using DICOM ingestion pipeline v2.3 and internal labelling platform v1.4.',
+        dataset_license: 'Internal use only; not redistributable.',
+      }];
+      doc.data.infrastructure = {
+        infrastructure_software: ['Python 3.11', 'PyTorch 2.3.0', 'NumPy 1.26.4', 'pydicom 2.4', 'FastAPI 0.110', 'PostgreSQL 16', 'Docker 24.0'],
+        infrastructure_hardware: 'https://example.com/hbom/chestrad-v1.json',
+      };
+      doc.data.security = {
+        security_controls: 'General: TLS 1.3 in transit; AES-256 at rest; RBAC with audit logging; API key + mTLS for hospital integrations; ISO 27001-certified DC.\nAI-specific: adversarial robustness testing (FGSM/PGD); input validation (DICOM schema); output sanity checks.',
+        security_compliance: 'ISO/IEC 27001:2022; SOC 2 Type II (2025); EU MDR Class IIa CE-marked; NIS2-aligned.',
+        cybersecurity_policy_information: 'https://example.com/.well-known/security.txt',
+        vulnerability_referencing: 'https://example.com/security/advisories',
+      };
+      doc.data.kpi = {
+        security_metrics: 'Adversarial robustness: ≥92% accuracy retained under FGSM ε=0.01. Annual red-team exercise.',
+        operational_performance_kpis: 'Uptime SLO 99.9%; p95 inference latency <450ms; throughput ≥80 req/s per replica; MTTR <30 min for P1.',
+      };
+      doc.updatedAt = new Date().toISOString();
+      return doc;
+    }
+
+    // ============================== ATOMS ===================================
+    function Button({ children, onClick, kind = 'default', icon: Icon, disabled, size, title, type = 'button' }) {
+      const cls = ['btn',
+        kind === 'primary' ? 'btn-primary' :
+        kind === 'ghost'   ? 'btn-ghost'   :
+        kind === 'soft'    ? 'btn-soft'    :
+        kind === 'danger'  ? 'btn-danger-ghost' : '',
+        size === 'sm' ? 'btn-sm' : ''
+      ].filter(Boolean).join(' ');
+      return (
+        <button type={type} onClick={onClick} disabled={disabled} title={title} className={cls}>
+          {Icon && <Icon size={size === 'sm' ? 12 : 14} />} {children}
+        </button>
+      );
+    }
+    function Rule({ strong, className = '' }) {
+      return <hr className={`${strong ? 'rule-strong' : 'rule'} ${className}`} />;
+    }
+    function StatusDot({ pct }) {
+      const cls = pct >= 100 ? 'dot dot-full' : pct > 0 ? 'dot dot-partial' : 'dot dot-empty';
+      return <span className={cls} />;
+    }
+    function Progress({ pct }) {
+      return <div className="pbar"><div style={{ width: `${pct}%` }} /></div>;
+    }
+
+    // ============================== FIELDS ==================================
+    function FieldShell({ num, element, children }) {
+      return (
+        <div className="field">
+          <div className="field-num mono">{num}</div>
+          <div>
+            <div className="field-label">{element.label}</div>
+            <div className="field-desc">{element.description}</div>
+            {children}
+            {element.examples && (
+              <div className="field-examples">
+                Examples — {element.examples}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+    function TextField({ num, element, value, onChange }) {
+      return <FieldShell num={num} element={element}>
+        <input type="text" className={`input ${element.mono ? 'input-mono' : ''}`} placeholder={element.placeholder} value={value || ''} onChange={(e) => onChange(e.target.value)} />
+      </FieldShell>;
+    }
+    function TextareaField({ num, element, value, onChange }) {
+      return <FieldShell num={num} element={element}>
+        <textarea rows={4} className="input textarea" placeholder={element.placeholder} value={value || ''} onChange={(e) => onChange(e.target.value)} />
+      </FieldShell>;
+    }
+    function UrlField({ num, element, value, onChange }) {
+      return <FieldShell num={num} element={element}>
+        <div style={{ position: 'relative' }}>
+          <input type="url" className="input" style={{ paddingRight: '2.25rem' }} placeholder={element.placeholder} value={value || ''} onChange={(e) => onChange(e.target.value)} />
+          <ExternalLink size={13} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink-4)', pointerEvents: 'none' }} />
+        </div>
+      </FieldShell>;
+    }
+    function DatetimeField({ num, element, value, onChange }) {
+      return <FieldShell num={num} element={element}>
+        <input type="datetime-local" className="input input-datetime" value={value || ''} onChange={(e) => onChange(e.target.value)} />
+      </FieldShell>;
+    }
+    function SelectField({ num, element, value, onChange }) {
+      return <FieldShell num={num} element={element}>
+        <select className="select" value={value || ''} onChange={(e) => onChange(e.target.value)}>
+          <option value="">— Select —</option>
+          {element.options.map((o) => <option key={o} value={o}>{o}</option>)}
+        </select>
+      </FieldShell>;
+    }
+    function MultiSelectField({ num, element, value, onChange }) {
+      const selected = Array.isArray(value) ? value : [];
+      const toggle = (o) => onChange(selected.includes(o) ? selected.filter((v) => v !== o) : [...selected, o]);
+      return <FieldShell num={num} element={element}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          {element.options.map((o) => {
+            const on = selected.includes(o);
+            return <button key={o} type="button" onClick={() => toggle(o)} className={`opt ${on ? 'opt-on' : ''}`}>
+              {on && <Check size={11} style={{ display: 'inline', marginRight: 6 }} />}{o}
+            </button>;
+          })}
+        </div>
+      </FieldShell>;
+    }
+    function StringArrayField({ num, element, value, onChange }) {
+      const [draft, setDraft] = useState('');
+      const items = Array.isArray(value) ? value : [];
+      const add = () => { const v = draft.trim(); if (!v) return; onChange([...items, v]); setDraft(''); };
+      const remove = (i) => onChange(items.filter((_, idx) => idx !== i));
+      return <FieldShell num={num} element={element}>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <input type="text" className="input" placeholder={element.placeholder} value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} />
+          <Button onClick={add} icon={Plus} kind="soft">Add</Button>
+        </div>
+        {items.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.65rem' }}>
+            {items.map((it, i) => (
+              <span key={i} className="chip">
+                {it}
+                <button onClick={() => remove(i)}><Close size={11} /></button>
+              </span>
+            ))}
+          </div>
+        )}
+      </FieldShell>;
+    }
+
+    function FieldDispatcher({ num, element, value, onChange }) {
+      switch (element.type) {
+        case 'textarea':    return <TextareaField num={num} element={element} value={value} onChange={onChange} />;
+        case 'url':         return <UrlField num={num} element={element} value={value} onChange={onChange} />;
+        case 'datetime':    return <DatetimeField num={num} element={element} value={value} onChange={onChange} />;
+        case 'select':      return <SelectField num={num} element={element} value={value} onChange={onChange} />;
+        case 'multiselect': return <MultiSelectField num={num} element={element} value={value} onChange={onChange} />;
+        case 'stringArray': return <StringArrayField num={num} element={element} value={value} onChange={onChange} />;
+        default:            return <TextField num={num} element={element} value={value} onChange={onChange} />;
+      }
+    }
+
+    // ============================== CLUSTER PANEL ============================
+    function ClusterPanel({ clusterIndex, cluster, data, onUpdate }) {
+      if (cluster.isArray) {
+        const items = data || [];
+        const updateItem = (idx, field, val) => onUpdate(items.map((it, i) => i === idx ? { ...it, [field]: val } : it));
+        const addItem = () => onUpdate([...items, {}]);
+        const removeItem = (idx) => onUpdate(items.filter((_, i) => i !== idx));
+        return (
+          <div>
+            {items.length === 0 && (
+              <div style={{ border: '1px dashed var(--rule)', padding: '3rem', textAlign: 'center', background: 'var(--paper-2)' }}>
+                <div className="serif-italic text-ink-3" style={{ fontSize: 16, marginBottom: '1rem' }}>
+                  No {cluster.itemLabel.toLowerCase()}s recorded yet.
+                </div>
+                <Button onClick={addItem} icon={Plus} kind="primary">Add first {cluster.itemLabel}</Button>
+              </div>
+            )}
+            {items.map((item, idx) => (
+              <div key={idx} style={{ marginBottom: '2.5rem', border: '1px solid var(--rule)', background: 'var(--paper-elev)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1.25rem', borderBottom: '1px solid var(--rule)', background: 'var(--paper-2)' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem' }}>
+                    <span className="section-num" style={{ fontSize: 18 }}>§ {clusterIndex + 1}.{idx + 1}</span>
+                    <span className="serif text-ink" style={{ fontSize: 16 }}>{cluster.itemLabel} {idx + 1}</span>
+                    {item[cluster.elements[0].id] && (
+                      <span className="serif-italic text-ink-3" style={{ fontSize: 14 }}>· {item[cluster.elements[0].id]}</span>
+                    )}
+                  </div>
+                  <Button onClick={() => removeItem(idx)} icon={Trash} kind="danger" size="sm">Remove</Button>
+                </div>
+                <div style={{ padding: '0.5rem 1.25rem' }}>
+                  {cluster.elements.map((el, i) => (
+                    <FieldDispatcher key={el.id} num={`${clusterIndex + 1}.${idx + 1}.${i + 1}`} element={el} value={item[el.id]} onChange={(v) => updateItem(idx, el.id, v)} />
+                  ))}
+                </div>
+              </div>
+            ))}
+            {items.length > 0 && (
+              <div style={{ paddingTop: '1rem' }}>
+                <Button onClick={addItem} icon={Plus} kind="soft">Add another {cluster.itemLabel}</Button>
+              </div>
+            )}
+          </div>
+        );
+      }
+      const update = (field, val) => onUpdate({ ...(data || {}), [field]: val });
+      return (
+        <div>
+          {cluster.elements.map((el, i) => (
+            <FieldDispatcher key={el.id} num={`${clusterIndex + 1}.${i + 1}`} element={el} value={data?.[el.id]} onChange={(v) => update(el.id, v)} />
+          ))}
+        </div>
+      );
+    }
+
+    // ============================== EXPORT MODAL ==============================
+    function ExportPanel({ doc, onClose }) {
+      const [copied, setCopied] = useState(false);
+      const json = useMemo(() => JSON.stringify(doc, null, 2), [doc]);
+      const copy = () => { navigator.clipboard?.writeText(json); setCopied(true); setTimeout(() => setCopied(false), 1600); };
+      const download = () => {
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${(doc.name || 'sbom-for-ai').replace(/[^a-z0-9-_]+/gi, '-').toLowerCase()}.json`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      };
+      return (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div style={{ padding: '1.25rem 1.75rem', borderBottom: '1px solid var(--rule)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div className="label-caps-accent">§ Export</div>
+                <div className="serif text-ink" style={{ fontSize: 22, marginTop: 4 }}>Machine-readable SBOM</div>
+                <div className="serif-italic text-ink-3" style={{ fontSize: 13, marginTop: 2 }}>JSON · structured by G7 clusters</div>
+              </div>
+              <button onClick={onClose} className="btn-ghost btn" style={{ padding: '0.4rem' }}><Close size={18} /></button>
+            </div>
+            <div style={{ flex: 1, overflow: 'auto', padding: '1.5rem 1.75rem' }}>
+              <pre className="mono" style={{ fontSize: 11, color: 'var(--ink-2)', background: 'var(--paper-2)', border: '1px solid var(--rule-soft)', padding: '1rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.6 }}>
+                {json}
+              </pre>
+            </div>
+            <div style={{ padding: '1rem 1.75rem', borderTop: '1px solid var(--rule)', background: 'var(--paper-2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="mono text-ink-3" style={{ fontSize: 11 }}>
+                {json.length.toLocaleString()} chars · {Object.keys(doc.data).length} clusters
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <Button onClick={copy} icon={copied ? Check : Copy} kind="soft">{copied ? 'Copied' : 'Copy JSON'}</Button>
+                <Button onClick={download} icon={Download} kind="primary">Download .json</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============================== ABOUT MODAL ===============================
+    function AboutModal({ onClose }) {
+      const linkedin = 'https://www.linkedin.com/in/brahim-el-allam-0a7731222/';
+      const citation = `EL ALLAM, B. (2026). SBOM4AI Builder: An interactive tool for
+G7-compliant Software Bills of Materials for AI systems.
+[Software]. MIT License.`;
+      return (
+        <div className="modal-backdrop">
+          <div className="modal" style={{ maxWidth: 44 + 'rem' }}>
+            <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid var(--ink)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <div>
+                <div className="label-caps-accent">Colophon</div>
+                <div className="serif text-ink" style={{ fontSize: 28, marginTop: 6, letterSpacing: '-0.01em' }}>About this tool</div>
+              </div>
+              <button onClick={onClose} className="btn btn-ghost" style={{ padding: '0.4rem' }}><Close size={18} /></button>
+            </div>
+            <div style={{ flex: 1, overflow: 'auto', padding: '1.75rem 2rem' }}>
+
+              <section style={{ marginBottom: '2rem' }}>
+                <div className="label-caps" style={{ marginBottom: '0.6rem' }}>§ 1 — Project</div>
+                <p className="serif text-ink-2" style={{ fontSize: 15, lineHeight: 1.65 }}>
+                  <span className="serif" style={{ fontWeight: 500, color: 'var(--ink)' }}>SBOM4AI Builder</span> is
+                  a free, open-source tool that operationalises the G7 Cybersecurity Working Group document{' '}
+                  <span className="serif-italic">"Software Bill of Materials for AI — Minimum Elements"</span>{' '}
+                  (February 2026). It runs entirely in the browser — no server, no tracking, no API.
+                </p>
+              </section>
+
+              <Rule />
+
+              <section style={{ margin: '2rem 0' }}>
+                <div className="label-caps" style={{ marginBottom: '1rem' }}>§ 2 — Developer</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '64px 1fr', gap: '1.25rem', alignItems: 'flex-start' }}>
+                  <div style={{ width: 56, height: 56, border: '1px solid var(--accent)', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span className="serif-italic" style={{ fontSize: 28, color: 'var(--accent)' }}>B</span>
+                  </div>
+                  <div>
+                    <div className="serif text-ink" style={{ fontSize: 22, letterSpacing: '-0.01em' }}>Brahim EL ALLAM</div>
+                    <div className="sans text-ink-2" style={{ fontSize: 13, marginTop: 4 }}>
+                      TÜV SÜD-certified PRRC <span className="text-ink-4">·</span> EU MDR Article 15 <span className="text-ink-4">·</span> QM/RA Manager
+                    </div>
+                    <div className="serif-italic text-ink-3" style={{ fontSize: 14, marginTop: 8 }}>
+                      Bridging regulatory rigour, engineering, and AI innovation.
+                    </div>
+                    <a href={linkedin} target="_blank" rel="noopener noreferrer" className="link sans" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 14, fontSize: 13 }}>
+                      <Linkedin size={13} /> Connect on LinkedIn <ExternalLink size={11} />
+                    </a>
+                  </div>
+                </div>
+              </section>
+
+              <Rule />
+
+              <section style={{ margin: '2rem 0' }}>
+                <div className="label-caps" style={{ marginBottom: '0.6rem' }}>§ 3 — License & Use</div>
+                <p className="serif text-ink-2" style={{ fontSize: 14.5, lineHeight: 1.65 }}>
+                  Released under the MIT License. <span style={{ color: 'var(--ink)', fontWeight: 500 }}>Free to use, modify, share, and deploy.</span>
+                  {' '}Attribution appreciated but not required. Fork it, host it on your own domain, embed it in
+                  your internal regulatory tooling — whatever serves the work.
+                </p>
+              </section>
+
+              <Rule />
+
+              <section style={{ margin: '2rem 0' }}>
+                <div className="label-caps" style={{ marginBottom: '0.6rem' }}>§ 4 — Feedback</div>
+                <p className="serif text-ink-2" style={{ fontSize: 14.5, lineHeight: 1.65, marginBottom: '1rem' }}>
+                  Built for the AI cybersecurity and regulatory community. Missing fields, workflow ideas,
+                  questions about a specific use case (EU MDR, EU AI Act, ISO/IEC 42001, NIST AI RMF) —
+                  your feedback shapes the next iteration.
+                </p>
+                <a href={linkedin} target="_blank" rel="noopener noreferrer" className="btn btn-primary sans" style={{ textDecoration: 'none' }}>
+                  <Linkedin size={13} /> Send feedback via LinkedIn
+                </a>
+              </section>
+
+              <Rule />
+
+              <section style={{ margin: '2rem 0' }}>
+                <div className="label-caps" style={{ marginBottom: '0.6rem' }}>§ 5 — Suggested Citation</div>
+                <pre className="mono" style={{ fontSize: 11.5, color: 'var(--ink-2)', background: 'var(--paper-2)', border: '1px solid var(--rule-soft)', padding: '0.85rem', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
+                  {citation}
+                </pre>
+              </section>
+
+              <Rule />
+
+              <section style={{ marginTop: '2rem' }}>
+                <div className="label-caps" style={{ marginBottom: '0.6rem' }}>§ 6 — Source Document</div>
+                <p className="serif text-ink-2" style={{ fontSize: 14.5, lineHeight: 1.65 }}>
+                  G7 Cybersecurity Working Group, <span className="serif-italic">"Software Bill of Materials for AI:
+                  Minimum Elements"</span> (February 2026). Jointly published by BSI (Germany), ACN (Italy),
+                  ANSSI (France), CSE (Canada), CISA (USA), NCSC (UK), NCO (Japan), with the EU Commission.
+                </p>
+                <p className="serif-italic text-ink-3" style={{ fontSize: 12.5, marginTop: '0.75rem', lineHeight: 1.55 }}>
+                  This tool is not a substitute for jurisdiction-specific legal requirements
+                  and is provided without warranty. Always consult applicable frameworks
+                  (EU MDR, EU AI Act, FDA, ISO/IEC 42001, ISO 13485).
+                </p>
+              </section>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============================== VALIDATION ===============================
+    function ValidationPanel({ doc, onJump }) {
+      return (
+        <div>
+          <div className="label-caps-accent" style={{ marginBottom: 8 }}>§ Validation</div>
+          <h1 className="serif text-ink" style={{ fontSize: 36, letterSpacing: '-0.015em', marginBottom: 12 }}>Coverage by cluster</h1>
+          <p className="serif text-ink-2" style={{ fontSize: 15.5, lineHeight: 1.65, maxWidth: '60ch', marginBottom: '2rem' }}>
+            Per-cluster coverage of the G7 minimum elements. Missing fields are not mandatory —
+            but completeness strengthens supply-chain transparency.
+          </p>
+          <Rule />
+          <div style={{ marginTop: '1rem' }}>
+            {CLUSTERS.map((c, i) => {
+              const r = clusterCompletion(c, doc.data[c.id]);
+              return (
+                <button key={c.id} onClick={() => onJump(c.id)} className="sbom-row" style={{ width: '100%', border: 'none', background: 'transparent', textAlign: 'left' }}>
+                  <div className="section-num" style={{ fontSize: 22 }}>§ {i + 1}</div>
+                  <div>
+                    <div className="serif text-ink" style={{ fontSize: 18 }}>{c.name}</div>
+                    <div className="serif-italic text-ink-3" style={{ fontSize: 13.5 }}>{c.summary}</div>
+                  </div>
+                  <div className="sans text-ink-3" style={{ fontSize: 12, minWidth: 120, textAlign: 'right' }}>
+                    {r.filled} / {r.total} fields
+                    {c.isArray && <div className="mono" style={{ fontSize: 10.5, marginTop: 2 }}>{r.items} {c.itemLabel.toLowerCase()}{r.items === 1 ? '' : 's'}</div>}
+                  </div>
+                  <div style={{ minWidth: 110, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ flex: 1 }}><Progress pct={r.pct} /></div>
+                    <span className="mono text-ink-2" style={{ fontSize: 12, minWidth: 32, textAlign: 'right' }}>{r.pct}%</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // ============================== HUB ======================================
+    function ProjectHub({ docs, onOpen, onCreate, onDelete, onLoadDemo, onShowAbout }) {
+      const linkedin = 'https://www.linkedin.com/in/brahim-el-allam-0a7731222/';
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+          {/* Masthead */}
+          <header style={{ borderBottom: '1px solid var(--ink)' }}>
+            <div style={{ maxWidth: 1120, margin: '0 auto', padding: '1.25rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div className="doc-marker">Volume 1 · Issue 1 · MMXXVI</div>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <a href={linkedin} target="_blank" rel="noopener noreferrer" className="btn btn-ghost sans" style={{ textDecoration: 'none', fontSize: 12 }}>
+                  <Linkedin size={12} /> Feedback
+                </a>
+                <Button onClick={onShowAbout} icon={Info} kind="ghost" size="sm">About</Button>
+              </div>
+            </div>
+          </header>
+
+          {/* Hero — publication title page */}
+          <section style={{ borderBottom: '1px solid var(--rule)' }}>
+            <div style={{ maxWidth: 1120, margin: '0 auto', padding: '4.5rem 2rem 3.5rem' }}>
+              <div className="label-caps-accent" style={{ marginBottom: 18 }}>
+                G7 Cybersecurity Working Group · An Implementation Tool
+              </div>
+              <h1 className="serif text-ink" style={{ fontSize: 'clamp(40px, 7vw, 84px)', lineHeight: 1.02, letterSpacing: '-0.02em', fontWeight: 400, marginBottom: '1rem', maxWidth: '17ch' }}>
+                Software Bill of Materials <span className="serif-italic text-ink-2">for AI Systems</span>
+              </h1>
+              <div className="rule-double" style={{ margin: '1.75rem 0 1.5rem', maxWidth: '6rem' }}></div>
+              <p className="serif text-ink-2" style={{ fontSize: 'clamp(15px, 1.6vw, 18px)', lineHeight: 1.55, maxWidth: '52ch', marginBottom: '1.75rem' }}>
+                An interactive builder for the seven clusters of minimum elements jointly
+                published in February 2026 by the cybersecurity agencies of Canada, France,
+                Germany, Italy, Japan, the United Kingdom, and the United States — with the
+                European Commission.
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0 1.5rem', alignItems: 'center', marginTop: '1.5rem' }}>
+                <span className="label-caps">Free</span>
+                <span className="text-ink-4">·</span>
+                <span className="label-caps">Open source</span>
+                <span className="text-ink-4">·</span>
+                <span className="label-caps">MIT licensed</span>
+                <span className="text-ink-4">·</span>
+                <span className="label-caps">No tracking</span>
+                <span className="text-ink-4">·</span>
+                <span className="label-caps">Runs locally</span>
+              </div>
+              <div style={{ marginTop: '2.5rem', display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                <span className="serif-italic text-ink-3" style={{ fontSize: 14 }}>Developed by</span>
+                <button onClick={onShowAbout} className="serif text-ink link-subtle" style={{ background: 'transparent', border: 'none', fontSize: 16, padding: 0, cursor: 'pointer' }}>
+                  Brahim EL ALLAM
+                </button>
+                <span className="text-ink-4">·</span>
+                <span className="sans text-ink-3" style={{ fontSize: 12.5 }}>PRRC · QM/RA Manager</span>
+              </div>
+            </div>
+          </section>
+
+          {/* SBOM list */}
+          <section style={{ flex: 1 }}>
+            <div style={{ maxWidth: 1120, margin: '0 auto', padding: '2.5rem 2rem' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '1.25rem', gap: '1rem', flexWrap: 'wrap' }}>
+                <div>
+                  <div className="label-caps">§ I — Your SBOMs</div>
+                  <h2 className="serif text-ink" style={{ fontSize: 30, letterSpacing: '-0.015em', marginTop: 6 }}>
+                    {docs.length === 0 ? 'Begin a new document' : `${docs.length} document${docs.length === 1 ? '' : 's'}`}
+                  </h2>
+                  <p className="serif-italic text-ink-3" style={{ fontSize: 14, marginTop: 4 }}>
+                    {docs.length === 0 ? 'Or load the demo to see all seven clusters populated.' : 'Saved locally in this browser.'}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <Button onClick={onLoadDemo} icon={Sparkles} kind="soft">Load demo</Button>
+                  <Button onClick={onCreate} icon={Plus} kind="primary">New SBOM</Button>
+                </div>
+              </div>
+
+              <Rule strong />
+
+              {docs.length === 0 ? (
+                <div style={{ padding: '4rem 1rem', textAlign: 'center', borderBottom: '1px solid var(--rule)' }}>
+                  <FileText size={28} className="text-ink-4" style={{ margin: '0 auto 1rem' }} />
+                  <p className="serif-italic text-ink-3" style={{ fontSize: 15 }}>No documents yet.</p>
+                </div>
+              ) : (
+                <div>
+                  {docs.map((d, i) => {
+                    const pct = overallCompletion(d);
+                    return (
+                      <div key={d.id} className="sbom-row" onClick={() => onOpen(d.id)} style={{ position: 'relative' }}>
+                        <div className="section-num" style={{ fontSize: 26 }}>{pad(i + 1)}.</div>
+                        <div>
+                          <div className="serif text-ink" style={{ fontSize: 19, letterSpacing: '-0.005em' }}>{d.name}</div>
+                          <div className="sans text-ink-3" style={{ fontSize: 12, marginTop: 3 }}>
+                            Updated {new Date(d.updatedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 200 }}>
+                          <div style={{ flex: 1, minWidth: 100 }}><Progress pct={pct} /></div>
+                          <span className="mono text-ink-2" style={{ fontSize: 12 }}>{pct}%</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                          <button onClick={() => onOpen(d.id)} className="link-subtle serif-italic" style={{ background: 'transparent', border: 'none', padding: '0.4rem', cursor: 'pointer', fontSize: 14 }}>
+                            Open →
+                          </button>
+                          <button onClick={() => { if (confirm(`Delete "${d.name}"?`)) onDelete(d.id); }}
+                                  className="btn btn-ghost btn-sm" title="Delete">
+                            <Trash size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Footer */}
+          <footer style={{ borderTop: '1px solid var(--ink)', background: 'var(--paper-2)' }}>
+            <div style={{ maxWidth: 1120, margin: '0 auto', padding: '2rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '1.5rem', marginBottom: '1.25rem' }}>
+                <div style={{ maxWidth: '36rem' }}>
+                  <div className="label-caps" style={{ marginBottom: 8 }}>Source Document</div>
+                  <p className="serif text-ink-2" style={{ fontSize: 13.5, lineHeight: 1.55 }}>
+                    G7 Cybersecurity Working Group, <span className="serif-italic">"Software Bill of Materials for AI:
+                    Minimum Elements"</span> (February 2026). Jointly published by BSI, ACN, ANSSI, CSE, CISA,
+                    NCSC, NCO, with the European Commission.
+                  </p>
+                </div>
+                <div>
+                  <div className="label-caps" style={{ marginBottom: 8 }}>Contact</div>
+                  <a href={linkedin} target="_blank" rel="noopener noreferrer" className="link sans" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+                    <Linkedin size={12} /> Brahim EL ALLAM
+                  </a>
+                  <button onClick={onShowAbout} className="link-subtle sans" style={{ display: 'block', background: 'transparent', border: 'none', padding: 0, marginTop: 6, fontSize: 12.5, cursor: 'pointer' }}>
+                    Colophon & Citation →
+                  </button>
+                </div>
+              </div>
+              <Rule />
+              <div className="sans text-ink-3" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '0.5rem', marginTop: '1rem', fontSize: 11 }}>
+                <span>MIT Licensed · Free to use, modify, and redistribute · No tracking · No API</span>
+                <span className="serif-italic">Not a substitute for jurisdiction-specific legal requirements.</span>
+              </div>
+            </div>
+          </footer>
+        </div>
+      );
+    }
+
+    // ============================== EDITOR ===================================
+    function Editor({ doc, onUpdate, onBack, onExport, onShowAbout }) {
+      const [activeClusterId, setActiveClusterId] = useState(CLUSTERS[0].id);
+      const activeCluster = useMemo(() => CLUSTERS.find((c) => c.id === activeClusterId), [activeClusterId]);
+      const isValidation = activeClusterId === '__validation__';
+      const overall = overallCompletion(doc);
+      const activeIndex = CLUSTERS.findIndex((c) => c.id === activeClusterId);
+
+      const updateCluster = (cid, val) => onUpdate({ ...doc, data: { ...doc.data, [cid]: val }, updatedAt: new Date().toISOString() });
+      const renameDoc = (name) => onUpdate({ ...doc, name, updatedAt: new Date().toISOString() });
+
+      const goPrev = () => { if (activeIndex > 0) setActiveClusterId(CLUSTERS[activeIndex - 1].id); };
+      const goNext = () => {
+        if (activeIndex >= 0 && activeIndex < CLUSTERS.length - 1) setActiveClusterId(CLUSTERS[activeIndex + 1].id);
+        else setActiveClusterId('__validation__');
+      };
+
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+          {/* Editor masthead */}
+          <header style={{ borderBottom: '1px solid var(--ink)', background: 'var(--paper)', position: 'sticky', top: 0, zIndex: 30 }}>
+            <div style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <button onClick={onBack} className="link-subtle sans" style={{ background: 'transparent', border: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.25rem 0', cursor: 'pointer', fontSize: 13 }}>
+                <ArrowLeft size={13} /> Index
+              </button>
+              <div style={{ width: 1, height: 18, background: 'var(--rule)' }} />
+              <input type="text" value={doc.name} onChange={(e) => renameDoc(e.target.value)}
+                className="serif text-ink"
+                style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none', fontSize: 22, letterSpacing: '-0.01em', padding: '0.25rem 0' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span className="mono text-ink-3" style={{ fontSize: 11 }}>{overall}%</span>
+                <div style={{ width: 100 }}><Progress pct={overall} /></div>
+                <div style={{ width: 1, height: 18, background: 'var(--rule)' }} />
+                <Button onClick={onShowAbout} icon={Info} kind="ghost" size="sm" title="About / Feedback">{null}</Button>
+                <Button onClick={onExport} icon={Download} kind="primary" size="sm">Export</Button>
+              </div>
+            </div>
+          </header>
+
+          <div style={{ flex: 1, display: 'flex' }}>
+            {/* Sidebar — table of contents */}
+            <aside style={{ width: 280, borderRight: '1px solid var(--rule)', padding: '1.5rem 1rem 1.5rem 1.5rem', background: 'var(--paper)', flexShrink: 0, display: 'none' }} className="md:block">
+              <div className="label-caps" style={{ marginBottom: 12, paddingLeft: 8 }}>Table of Contents</div>
+              <nav>
+                {CLUSTERS.map((c, i) => {
+                  const r = clusterCompletion(c, doc.data[c.id]);
+                  return (
+                    <button key={c.id} className={`nav-item ${c.id === activeClusterId ? 'active' : ''}`} onClick={() => setActiveClusterId(c.id)}>
+                      <span className="nav-num">§ {i + 1}</span>
+                      <span>{c.name}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <StatusDot pct={r.pct} />
+                        <span className="nav-pct">{r.pct}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+                <hr className="rule" style={{ margin: '1rem 0' }} />
+                <button className={`nav-item ${isValidation ? 'active' : ''}`} onClick={() => setActiveClusterId('__validation__')}>
+                  <span className="nav-num">✓</span>
+                  <span>Validation</span>
+                  <span />
+                </button>
+              </nav>
+              <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--rule-soft)', paddingLeft: 8 }}>
+                <div className="label-caps" style={{ marginBottom: 6 }}>Author</div>
+                <button onClick={onShowAbout} className="serif-italic link-subtle" style={{ background: 'transparent', border: 'none', padding: 0, fontSize: 14, cursor: 'pointer', display: 'block', marginBottom: 4, color: 'var(--ink)' }}>
+                  Brahim EL ALLAM
+                </button>
+                <a href="https://www.linkedin.com/in/brahim-el-allam-0a7731222/" target="_blank" rel="noopener noreferrer" className="link sans" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5 }}>
+                  <Linkedin size={10} /> Send feedback
+                </a>
+              </div>
+            </aside>
+
+            {/* Main content */}
+            <main style={{ flex: 1, overflow: 'auto' }}>
+              <div style={{ maxWidth: 800, margin: '0 auto', padding: '3rem 2rem 4rem' }}>
+                {/* Mobile cluster picker */}
+                <div className="md:hidden" style={{ marginBottom: '2rem' }}>
+                  <select className="select" value={activeClusterId} onChange={(e) => setActiveClusterId(e.target.value)}>
+                    {CLUSTERS.map((c, i) => {
+                      const r = clusterCompletion(c, doc.data[c.id]);
+                      return <option key={c.id} value={c.id}>§ {i + 1} — {c.name} ({r.pct}%)</option>;
+                    })}
+                    <option value="__validation__">✓ Validation</option>
+                  </select>
+                </div>
+
+                {isValidation ? (
+                  <ValidationPanel doc={doc} onJump={(id) => setActiveClusterId(id)} />
+                ) : (
+                  <>
+                    <div style={{ marginBottom: '2.5rem' }}>
+                      <div className="label-caps-accent" style={{ marginBottom: 12 }}>
+                        Section {activeIndex + 1} of {CLUSTERS.length}{activeCluster.isArray && ' · multiple entries'}
+                      </div>
+                      <h1 className="serif text-ink" style={{ fontSize: 'clamp(34px, 5vw, 52px)', letterSpacing: '-0.02em', lineHeight: 1.05, marginBottom: '1rem', fontWeight: 400 }}>
+                        <span className="section-num" style={{ fontSize: '0.7em', marginRight: '0.3em' }}>§ {activeIndex + 1}</span>
+                        {activeCluster.name}
+                      </h1>
+                      <p className="serif text-ink-2" style={{ fontSize: 16.5, lineHeight: 1.6, maxWidth: '54ch' }}>
+                        {activeCluster.description}
+                      </p>
+                      <Rule className="" />
+                    </div>
+
+                    <ClusterPanel
+                      clusterIndex={activeIndex}
+                      cluster={activeCluster}
+                      data={doc.data[activeCluster.id]}
+                      onUpdate={(v) => updateCluster(activeCluster.id, v)}
+                    />
+
+                    <Rule className="" />
+                    <div style={{ paddingTop: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                      <Button onClick={goPrev} icon={ChevronLeft} kind="ghost" disabled={activeIndex === 0}>Previous section</Button>
+                      <div className="serif-italic text-ink-3 md:block" style={{ fontSize: 12 }}>
+                        Field-by-field guidance from the G7 source document.
+                      </div>
+                      <Button onClick={goNext} kind="soft">{activeIndex === CLUSTERS.length - 1 ? 'Validation' : 'Next section'} <ChevronRight size={13} /></Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </main>
+          </div>
+        </div>
+      );
+    }
+
+    // ============================== MAIN APP =================================
+    function SBOM4AIBuilder() {
+      const [docs, setDocs] = useState([]);
+      const [activeDoc, setActiveDoc] = useState(null);
+      const [showExport, setShowExport] = useState(false);
+      const [showAbout, setShowAbout] = useState(false);
+      const [loaded, setLoaded] = useState(false);
+      const saveTimer = useRef(null);
+
+      useEffect(() => {
+        const idx = loadIndex();
+        const docs = idx.map((e) => loadDoc(e.id)).filter(Boolean);
+        setDocs(docs);
+        setLoaded(true);
+      }, []);
+
+      useEffect(() => {
+        if (!activeDoc) return;
+        if (saveTimer.current) clearTimeout(saveTimer.current);
+        saveTimer.current = setTimeout(() => {
+          saveDoc(activeDoc.id, activeDoc);
+          const idx = loadIndex();
+          const entry = { id: activeDoc.id, name: activeDoc.name, updatedAt: activeDoc.updatedAt };
+          const has = idx.find((e) => e.id === activeDoc.id);
+          saveIndex(has ? idx.map((e) => e.id === entry.id ? entry : e) : [entry, ...idx]);
+          setDocs((prev) => {
+            const found = prev.find((d) => d.id === activeDoc.id);
+            return found ? prev.map((d) => d.id === activeDoc.id ? activeDoc : d) : [activeDoc, ...prev];
+          });
+        }, 500);
+        return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+      }, [activeDoc]);
+
+      const openDoc = (id) => { const d = loadDoc(id); if (d) setActiveDoc(d); };
+      const createDoc = () => {
+        const d = makeEmptyDoc();
+        saveDoc(d.id, d);
+        const idx = loadIndex();
+        saveIndex([{ id: d.id, name: d.name, updatedAt: d.updatedAt }, ...idx]);
+        setDocs((p) => [d, ...p]);
+        setActiveDoc(d);
+      };
+      const loadDemo = () => {
+        const d = makeDemoDoc();
+        saveDoc(d.id, d);
+        const idx = loadIndex();
+        saveIndex([{ id: d.id, name: d.name, updatedAt: d.updatedAt }, ...idx]);
+        setDocs((p) => [d, ...p]);
+        setActiveDoc(d);
+      };
+      const deleteDocById = (id) => {
+        deleteDoc(id);
+        const idx = loadIndex();
+        saveIndex(idx.filter((e) => e.id !== id));
+        setDocs((p) => p.filter((d) => d.id !== id));
+        if (activeDoc && activeDoc.id === id) setActiveDoc(null);
+      };
+
+      if (!loaded) {
+        return (
+          <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="animate-spin"><Loader size={20} className="text-ink-3" /></div>
+          </div>
+        );
+      }
+
+      return (
+        <>
+          {activeDoc ? (
+            <Editor doc={activeDoc} onUpdate={setActiveDoc} onBack={() => setActiveDoc(null)} onExport={() => setShowExport(true)} onShowAbout={() => setShowAbout(true)} />
+          ) : (
+            <ProjectHub docs={docs} onOpen={openDoc} onCreate={createDoc} onLoadDemo={loadDemo} onDelete={deleteDocById} onShowAbout={() => setShowAbout(true)} />
+          )}
+          {showExport && activeDoc && <ExportPanel doc={activeDoc} onClose={() => setShowExport(false)} />}
+          {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<SBOM4AIBuilder />);
+  </script>
+</body>
+</html>
